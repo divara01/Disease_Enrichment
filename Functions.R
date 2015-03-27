@@ -269,4 +269,30 @@ GenerateMagicSubnetworks_InfoFlowMMOmental <- function(num_neighbors, mode_RO, m
   return(list(temp_df, MM_neighbors_list, MM_neighbors))
 }
 #************************************************************************************
-
+####Generate.PAB.SN.Sit1 Function####
+#Generates subnetworks for Situation one MM > P > A > B > RO
+Generate.PAB.SN.Sit1 <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighbors) {
+  temp_combined_Subnetworks <- data.frame(matrix(NA, nrow = length(V(g_whole_omental)$name), ncol = ncol(temp_df_B_SNs)))
+  colnames(temp_combined_Subnetworks) <- colnames(temp_df_B_SNs)
+  
+  A_list_from_P <- NULL
+  for(A_index in 1:ncol(temp_df_P_SNs)){
+    A_list_from_P <- append(A_list_from_P, unlist(strsplit(colnames(temp_df_P_SNs)[A_index], split='_', fixed=TRUE))[2])
+  }
+  
+  for(B_index in 1:ncol(temp_combined_Subnetworks)){
+    #B_index = 250
+    Individual_B_from_A <- unlist(strsplit(colnames(temp_df_B_SNs)[B_index], split='_', fixed=TRUE))[2]
+    P_SN <- as.vector(na.omit(temp_df_P_SNs[, match(Individual_B_from_A, A_list_from_P)]))
+    B_SN <- as.vector(na.omit(temp_df_B_SNs[,B_index]))
+    PAB_SN <- union(P_SN, B_SN)
+    
+    for(input_index in 1:length(PAB_SN)){
+      AB_combined_Subnetworks[input_index, B_index] <- PAB_SN[input_index]
+    }
+    rm(P_SN, B_SN, Individual_B_from_A, PAB_SN)
+  }
+  
+  return(AB_combined_Subnetworks)
+}
+#************************************************************************************
