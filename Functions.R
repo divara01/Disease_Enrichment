@@ -23,6 +23,7 @@ Stouffer.test <- function(p, w) {
 #************************************************************************************
 
 #************************************************************************************
+
 ####Calculate Over Enrichment Score Function####
 #Use - To calculatate enrichment score and return over enrichment p-value from Fisher Test
 OverEnrichment <- function(Overlap, TargetSize, TestSetSize, TotalSize) {
@@ -45,7 +46,8 @@ OverEnrichment <- function(Overlap, TargetSize, TestSetSize, TotalSize) {
 #************************************************************************************
 
 #************************************************************************************
-#GenerateOmentalSubnetworks_InfoFlowOmentalMM Function
+
+#####GenerateOmentalSubnetworks_InfoFlowOmentalMM Function####
 #Use - Determine Direction of Information Flow From and To Omental From and To Magic Module (use this for permutations as well)
 GenerateOmentalSubnetworks_InfoFlowOmentalMM <- function(num_neighbors, mode_magic, mode_neighbors, magic_module){
   
@@ -113,9 +115,9 @@ GenerateOmentalSubnetworks_InfoFlowOmentalMM <- function(num_neighbors, mode_mag
     if(num_genes_SN != 0){
       neighbors_x_list_from <- neighborhood(g_whole_omental, order = 1, nodes = pos, mode = "out")
       neighbors_x_list_to <- neighborhood(g_whole_omental, order = 1, nodes = pos, mode = "in")
-      ######      
+      ####      
       #FROM#
-      ######
+      ###
       for (list_index in 1: length(neighbors_x_list_from)){
         neighbors_x_list_from[[list_index]] <- V(g_whole_omental)$name[neighbors_x_list_from[[list_index]]]
       }
@@ -130,9 +132,9 @@ GenerateOmentalSubnetworks_InfoFlowOmentalMM <- function(num_neighbors, mode_mag
       
       num_RO_from_ISN <- length(which(!(unlist_neighbors_x_list_from_ISN %in% magic_module))) 
       
-      ####
+      ###
       #TO#
-      ####
+      ###
       for (list_index in 1: length(neighbors_x_list_to)){
         neighbors_x_list_to[[list_index]] <- V(g_whole_omental)$name[neighbors_x_list_to[[list_index]]]
       }
@@ -163,6 +165,7 @@ GenerateOmentalSubnetworks_InfoFlowOmentalMM <- function(num_neighbors, mode_mag
 #************************************************************************************
 
 #************************************************************************************
+
 ####GenerateMagicSubnetworks_InfoFlowMMOmental Function####
 #Use - Situations #5-8: Determine Direction of Information Flow From and To Omental From and To Magic Module
 GenerateMagicSubnetworks_InfoFlowMMOmental <- function(num_neighbors, mode_RO, mode_neighbors){
@@ -219,9 +222,9 @@ GenerateMagicSubnetworks_InfoFlowMMOmental <- function(num_neighbors, mode_RO, m
     if(num_genes_SN != 0){
       neighbors_x_list_from <- neighborhood(g_whole_omental, order = 1, nodes = pos, mode = "out")
       neighbors_x_list_to <- neighborhood(g_whole_omental, order = 1, nodes = pos, mode = "in")
-      ######      
+      ###    
       #FROM#
-      ######
+      ###
       for (list_index in 1: length(neighbors_x_list_from)){
         neighbors_x_list_from[[list_index]] <- V(g_whole_omental)$name[neighbors_x_list_from[[list_index]]]
       }
@@ -236,9 +239,9 @@ GenerateMagicSubnetworks_InfoFlowMMOmental <- function(num_neighbors, mode_RO, m
       
       num_MM_from_ISN <- length(unlist_neighbors_x_list_from_ISN %in% magic_module_genes$EntrezID) 
       
-      ####
+      ###
       #TO#
-      ####
+      ###
       for (list_index in 1: length(neighbors_x_list_to)){
         neighbors_x_list_to[[list_index]] <- V(g_whole_omental)$name[neighbors_x_list_to[[list_index]]]
       }
@@ -269,9 +272,10 @@ GenerateMagicSubnetworks_InfoFlowMMOmental <- function(num_neighbors, mode_RO, m
   return(list(temp_df, MM_neighbors_list, MM_neighbors))
 }
 #************************************************************************************
-####Generate.PAB.SN.Sit1 Function####
+
+####Generate.MMandROCombined.SN Function####
 #Generates subnetworks for Situation one MM > P > A > B > RO
-Generate.PAB.SN.Sit1 <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighbors) {
+Generate.MMandROCombined.SN <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighbors) {
   temp_combined_Subnetworks <- data.frame(matrix(NA, nrow = length(V(g_whole_omental)$name), ncol = ncol(temp_df_B_SNs)))
   colnames(temp_combined_Subnetworks) <- colnames(temp_df_B_SNs)
   
@@ -288,11 +292,13 @@ Generate.PAB.SN.Sit1 <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighbors) {
     PAB_SN <- union(P_SN, B_SN)
     
     for(input_index in 1:length(PAB_SN)){
-      AB_combined_Subnetworks[input_index, B_index] <- PAB_SN[input_index]
+      temp_combined_Subnetworks[input_index, B_index] <- PAB_SN[input_index]
+      
     }
+    colnames(temp_combined_Subnetworks)[B_index] <- paste(colnames(temp_df_B_SNs)[B_index], "g", length(PAB_SN), sep="_")
     rm(P_SN, B_SN, Individual_B_from_A, PAB_SN)
   }
   
-  return(AB_combined_Subnetworks)
+  return(temp_combined_Subnetworks)
 }
 #************************************************************************************
