@@ -101,7 +101,7 @@ for (count in 1:ncol(SNs_Situation1)){
 rm(val, index, count, Blength, Plength)
 
 ####Generate Subnetworks for each B and P to each degree (situation 1)####
-neighbors_list <- c("C", "D", "E", "F", "G", "Q", "R", "S", "T", "Uneeded")
+neighbors_list <- c("C", "D", "E", "F", "G", "P", "Q", "R", "S", "T")
 for (num_neighbors in 1:5){
   temp_df_B_SNs <- data.frame(matrix(NA, nrow = length(V(g_RO)$name), ncol = 1))
   temp_df_P_SNs <- data.frame(matrix(NA, nrow = length(V(g_MM)$name), ncol = 1))
@@ -122,19 +122,24 @@ for (num_neighbors in 1:5){
         temp_df_B_SNs$placeholder <- NA
       }
     } else{
+  #    i = 3
         temp_listofPs <- SNs_Situation1[which(!is.na(SNs_Situation1[,i])), i]
         temp_pos_Ps <- match(temp_listofPs, V(g_MM)$name)
         
-        temp_neighbors_of_Ps <- neighborhood(g_MM, nodes = temp_pos_Ps, order = num_neighbors, mode = "in")
-        for(list_index in 1:length(temp_neighbors_of_Ps)){
+        temp_neighbors_of_Ps <- neighborhood(g_MM, nodes = temp_pos_Ps, order = num_neighbors-1, mode = "in")
+
+        for (list_index in 1:length(temp_neighbors_of_Ps)){
           temp_neighbors_of_Ps[[list_index]] <- V(g_MM)$name[temp_neighbors_of_Ps[[list_index]]]
-          length_each_P_neighbors <- length(temp_neighbors_of_Ps[[list_index]])
-          for (row in 1:length_each_P_neighbors){
-            temp_df_P_SNs[row, ncol(temp_df_P_SNs)] <- temp_neighbors_of_Ps[[list_index]][row]
-          }
-          colnames(temp_df_P_SNs)[ncol(temp_df_P_SNs)] <- paste("A", colnames(SNs_Situation1)[i], temp_neighbors_of_Ps[[list_index]][1], sep = "_")
-          temp_df_P_SNs$placeholder <- NA
         }
+        temp_neighbors_of_Ps <- unique(unlist(temp_neighbors_of_Ps))
+      
+        length_P_neighbors <- length(temp_neighbors_of_Ps)
+      
+        for(row in 1:length(temp_neighbors_of_Ps)){
+          temp_df_P_SNs[row, ncol(temp_df_P_SNs)] <- temp_neighbors_of_Ps[row]
+        }
+        colnames(temp_df_P_SNs)[ncol(temp_df_P_SNs)] <- paste("A", colnames(SNs_Situation1)[i], temp_neighbors_of_Ps[2], sep = "_")
+        temp_df_P_SNs$placeholder <- NA
       }
   }
   temp_df_B_SNs$placeholder <- NULL
@@ -160,4 +165,133 @@ for (num_neighbors in 1:5){
 
 rm(temp_df_P_SNs, temp_df_B_SNs, delete, lengths_P, lengths_B, temp_pos_Bs, temp_pos_Ps)
 
+####Try to generate SN combining P and each B-WORKS!####
+AB_combined_Subnetworks <- data.frame(matrix(NA, nrow = length(V(g_whole_omental)$name), ncol = ncol(Situation1_B_C_SNs)))
+colnames(AB_combined_Subnetworks) <- colnames(Situation1_B_C_SNs)
+
+A_list_from_P <- NULL
+for(A_index in 1:ncol(Situation1_A_P_SNs)){
+  A_list_from_P <- append(A_list_from_P, unlist(strsplit(colnames(Situation1_A_P_SNs)[A_index], split='_', fixed=TRUE))[2])
+}
+
+for(B_index in 1:ncol(AB_combined_Subnetworks)){
+  Individual_B_from_A <- unlist(strsplit(colnames(Situation1_B_C_SNs)[B_index], split='_', fixed=TRUE))[2]
+  P_SN <- as.vector(na.omit(Situation1_A_P_SNs[, match(Individual_B_from_A, A_list_from_P)]))
+  B_SN <- as.vector(na.omit(Situation1_B_C_SNs[,B_index]))
+  PAB_SN <- union(P_SN, B_SN)
+  
+  for(input_index in 1:length(PAB_SN)){
+    AB_combined_Subnetworks[input_index, B_index] <- PAB_SN[input_index]
+  }
+}
+
+lengths_AB <- NULL
+for(i in 1:ncol(AB_combined_Subnetworks)){
+  lengths_AB <- append(lengths_AB, length(which(!is.na(AB_combined_Subnetworks[,i]))))
+}
+delete <- (max(lengths_AB) + 1):nrow(AB_combined_Subnetworks)
+AB_combined_Subnetworks <- AB_combined_Subnetworks[-delete, ]
+
+####Test Function####
+neighbors_list <- c("C", "D", "E", "F", "G", "P", "Q", "R", "S", "T")
+for (num_neighbors in 1:5){
+  temp_df_B_SNs <- data.frame(matrix(NA, nrow = length(V(g_RO)$name), ncol = 1))
+  temp_df_P_SNs <- data.frame(matrix(NA, nrow = length(V(g_MM)$name), ncol = 1))
+  
+  for (i in 1:ncol(SNs_Situation1)){
+    if(i %% 2 == 0){
+      temp_listofBs <- SNs_Situation1[which(!is.na(SNs_Situation1[,i])), i]
+      temp_pos_Bs <- match(temp_listofBs, V(g_RO)$name)
+      
+      temp_neighbors_of_Bs <- neighborhood(g_RO, nodes = temp_pos_Bs, order = num_neighbors, mode = "out")
+      for(list_index in 1:length(temp_neighbors_of_Bs)){
+        temp_neighbors_of_Bs[[list_index]] <- V(g_RO)$name[temp_neighbors_of_Bs[[list_index]]]
+        length_each_B_neighbors <- length(temp_neighbors_of_Bs[[list_index]])
+        for (row in 1:length_each_B_neighbors){
+          temp_df_B_SNs[row, ncol(temp_df_B_SNs)] <- temp_neighbors_of_Bs[[list_index]][row]
+        }
+        colnames(temp_df_B_SNs)[ncol(temp_df_B_SNs)] <- paste("A", colnames(SNs_Situation1)[i], temp_neighbors_of_Bs[[list_index]][1], sep = "_")
+        temp_df_B_SNs$placeholder <- NA
+      }
+    } else{
+      #    i = 3
+      temp_listofPs <- SNs_Situation1[which(!is.na(SNs_Situation1[,i])), i]
+      temp_pos_Ps <- match(temp_listofPs, V(g_MM)$name)
+      
+      temp_neighbors_of_Ps <- neighborhood(g_MM, nodes = temp_pos_Ps, order = num_neighbors-1, mode = "in")
+      
+      for (list_index in 1:length(temp_neighbors_of_Ps)){
+        temp_neighbors_of_Ps[[list_index]] <- V(g_MM)$name[temp_neighbors_of_Ps[[list_index]]]
+      }
+      temp_neighbors_of_Ps <- unique(unlist(temp_neighbors_of_Ps))
+      
+      length_P_neighbors <- length(temp_neighbors_of_Ps)
+      
+      for(row in 1:length(temp_neighbors_of_Ps)){
+        temp_df_P_SNs[row, ncol(temp_df_P_SNs)] <- temp_neighbors_of_Ps[row]
+      }
+      colnames(temp_df_P_SNs)[ncol(temp_df_P_SNs)] <- paste("A", colnames(SNs_Situation1)[i], temp_neighbors_of_Ps[2], sep = "_")
+      temp_df_P_SNs$placeholder <- NA
+    }
+  }
+  temp_df_B_SNs$placeholder <- NULL
+  temp_df_P_SNs$placeholder <- NULL
+  lengths_B <- NULL
+  
+  for(i in 1:ncol(temp_df_B_SNs)){
+    lengths_B <- append(lengths_B, length(which(!is.na(temp_df_B_SNs[,i]))))
+  }
+  delete <- (max(lengths_B) + 1):nrow(temp_df_B_SNs)
+  temp_df_B_SNs <- temp_df_B_SNs[-delete, ]
+  
+  lengths_P <- NULL
+  for(i in 1:ncol(temp_df_P_SNs)){
+    lengths_P <- append(lengths_P, length(which(!is.na(temp_df_P_SNs[,i]))))
+  }
+  delete <- (max(lengths_P) + 1):nrow(temp_df_P_SNs)
+  temp_df_P_SNs <- temp_df_P_SNs[-delete, ]
+  
+  AB_combined_Subnetworks <- Generate.PAB.SN.Sit1(temp_df_B_SNs, temp_df_P_SNs, num_neighbors)
+
+  lengths_AB <- NULL
+  for(i in 1:ncol(AB_combined_Subnetworks)){
+    lengths_AB <- append(lengths_AB, length(which(!is.na(AB_combined_Subnetworks[,i]))))
+  }
+  delete <- max(lengths_AB) + 1:nrow(AB_combined_Subnetworks)
+  AB_combined_Subnetworks <- AB_combined_Subnetworks[-delete, ]
+  
+  filename <- paste("Situation1_AB_combined_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(AB_combined_Subnetworks, file = filename)
+  
+  assign(paste("Situation1_B", neighbors_list[num_neighbors], "SNs", sep = "_"), temp_df_B_SNs)
+  assign(paste("Situation1_A", neighbors_list[num_neighbors+5], "SNs", sep = "_"), temp_df_P_SNs)
+  assign(paste("Situation1_AB_combined_SN_d_", num_neighbors, sep = ""), AB_combined_Subnetworks)
+}
+
+
+####FUNCTIONS####
+Generate.PAB.SN.Sit1 <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighbors) {
+  temp_combined_Subnetworks <- data.frame(matrix(NA, nrow = length(V(g_whole_omental)$name), ncol = ncol(temp_df_B_SNs)))
+  colnames(temp_combined_Subnetworks) <- colnames(temp_df_B_SNs)
+  
+  A_list_from_P <- NULL
+  for(A_index in 1:ncol(temp_df_P_SNs)){
+    A_list_from_P <- append(A_list_from_P, unlist(strsplit(colnames(temp_df_P_SNs)[A_index], split='_', fixed=TRUE))[2])
+  }
+  
+  for(B_index in 1:ncol(temp_combined_Subnetworks)){
+    #B_index = 250
+    Individual_B_from_A <- unlist(strsplit(colnames(temp_df_B_SNs)[B_index], split='_', fixed=TRUE))[2]
+    P_SN <- as.vector(na.omit(temp_df_P_SNs[, match(Individual_B_from_A, A_list_from_P)]))
+    B_SN <- as.vector(na.omit(temp_df_B_SNs[,B_index]))
+    PAB_SN <- union(P_SN, B_SN)
+    
+    for(input_index in 1:length(PAB_SN)){
+      AB_combined_Subnetworks[input_index, B_index] <- PAB_SN[input_index]
+    }
+    rm(P_SN, B_SN, Individual_B_from_A, PAB_SN)
+  }
+  
+  return(AB_combined_Subnetworks)
+}
 
