@@ -274,7 +274,7 @@ GenerateMagicSubnetworks_InfoFlowMMOmental <- function(num_neighbors, mode_RO, m
 #************************************************************************************
 
 ####Generate.MMandROCombined.SN Function####
-#Generates subnetworks for Situation one MM > P > A > B > RO
+#Generates subnetworks for Combining multiple B's into one subnetwork
 Generate.MMandROCombined.SN <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighbors) {
   temp_combined_Subnetworks <- data.frame(matrix(NA, nrow = length(V(g_whole_omental)$name), ncol = ncol(temp_df_B_SNs)))
   colnames(temp_combined_Subnetworks) <- colnames(temp_df_B_SNs)
