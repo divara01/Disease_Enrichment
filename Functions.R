@@ -272,7 +272,6 @@ GenerateMagicSubnetworks_InfoFlowMMOmental <- function(num_neighbors, mode_RO, m
   return(list(temp_df, MM_neighbors_list, MM_neighbors))
 }
 #************************************************************************************
-
 ####Generate.MMandROCombined.SN Function####
 #Generates subnetworks for Combining multiple B's into one subnetwork
 Generate.MMandROCombined.SN <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighbors) {
@@ -302,3 +301,43 @@ Generate.MMandROCombined.SN <- function(temp_df_B_SNs, temp_df_P_SNs, num_neighb
   return(temp_combined_Subnetworks)
 }
 #************************************************************************************
+####Pairwise.Disease.Table Function####
+#Generates Contingency table for number of subnetworks each disease is significantly enriched for
+Pairwise.Disease.Table <- function(test_PW_DIS) {
+  
+  for(i in 1:nrow(test_PW_DIS)){
+    for (j in 1:ncol(test_PW_DIS)){
+      if((i %% 2 == 0) && (j %% 2 != 0)){ #Puts NA for any FDR values that are > 0.1
+        test_PW_DIS[i, j] <- ifelse(test_PW_DIS[i, j] > 0.100000001, ifelse(test_PW_DIS[i, j] == "pval highly sig", test_PW_DIS[i, j], "NA"), test_PW_DIS[i, j])
+        test_PW_DIS[i-1, j] <- ifelse(test_PW_DIS[i,j] == "NA", "NA", test_PW_DIS[i-1, j]) #For Significant comment out for nominally significant
+      }
+      
+      if(i %% 2 != 0){ #Puts NA for any pval that is > 0.05
+        test_PW_DIS[i, j] <- ifelse(test_PW_DIS[i, j] > 0.05, "NA", test_PW_DIS[i, j])
+      }
+      
+      if(j %% 2 == 0){ #Puts NA for all counts
+        test_PW_DIS[i, j] <- "NA"
+      }
+    }
+  }
+  
+  PVAL_df <- data.frame(matrix(NA, nrow = ncol(GeneSetTable), ncol = ncol(test_PW_DIS)/2), row.names = colnames(GeneSetTable))
+  
+  for(i in 1:ncol(test_PW_DIS)){
+    for (j in 1:nrow(test_PW_DIS)){
+      if(i %% 2 != 0 && j %% 2 != 0){
+        temp_row <- ceiling(j/2)
+        temp_col <- ceiling(i/2)
+        PVAL_df[temp_row, temp_col] <- test_PW_DIS[j, i]
+        colnames(PVAL_df)[temp_col] <- colnames(test_PW_DIS)[i]
+      }
+    }
+  }
+  
+  PVAL_df <- ifelse(is.na(PVAL_df), 0, 1)
+  
+  test <- as.data.frame(PVAL_df %*% t(PVAL_df))
+  
+  return(test)
+}
