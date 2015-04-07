@@ -745,7 +745,6 @@ for (num_neighbors in 1:5){
   
   for (i in 1:ncol(SNs_Situation1)){
     if(i %% 2 == 0){
-      #i = 2
       temp_listofBs <- SNs_Situation1[which(!is.na(SNs_Situation1[,i])), i]
       temp_pos_Bs <- match(temp_listofBs, V(g_RO)$name)
       
@@ -760,7 +759,6 @@ for (num_neighbors in 1:5){
       colnames(temp_df_B_SNs)[ncol(temp_df_B_SNs)] <- paste("A", colnames(SNs_Situation1)[i], sep = "_")
       temp_df_B_SNs$placeholder <- NA
     } else{
-      #    i = 3
       temp_listofPs <- SNs_Situation1[which(!is.na(SNs_Situation1[,i])), i]
       temp_pos_Ps <- match(temp_listofPs, V(g_MM)$name)
       
@@ -930,6 +928,17 @@ for (num_neighbors in 1:5){
   
   TableauDiseaseEnrichment <- TableauDiseaseEnrichment[-1, ]
   output <- output[,-1]
+  
+  assign("test_PW_DIS", output)
+  
+  temp_df_sig <- Pairwise.Disease.Table.Sig(test_PW_DIS)
+  temp_df_nom_sig <- Pairwise.Disease.Table.Nom.Sig(test_PW_DIS)
+  
+  filename_pairwise_sig <- paste("Dis_Sig_Pairwise_Situation1_PAB_combined_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_sig, file = filename_pairwise_sig)
+  
+  filename_pairwise_nom_sig <- paste("Dis_Nom_Sig_Pairwise_Situation1_PAB_combined_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_nom_sig, file = filename_pairwise_nom_sig)
   
   filename <- paste("Situation1_PAB_combined_SN_d_", num_neighbors, ".csv", sep = "")
   write.csv(AB_combined_Subnetworks, file = filename)
@@ -1137,6 +1146,16 @@ for (num_neighbors in 1:5){
   TableauDiseaseEnrichment <- TableauDiseaseEnrichment[-1, ]
   output <- output[,-1]
   
+  assign("test_PW_DIS", output)
+  
+  temp_df_sig <- Pairwise.Disease.Table.Sig(test_PW_DIS)
+  temp_df_nom_sig <- Pairwise.Disease.Table.Nom.Sig(test_PW_DIS)
+  
+  filename_pairwise_sig <- paste("Dis_Sig_Pairwise_Situation2_BAP_combined_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_sig, file = filename_pairwise_sig)
+  
+  filename_pairwise_nom_sig <- paste("Dis_Nom_Sig_Pairwise_Situation2_BAP_combined_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_nom_sig, file = filename_pairwise_nom_sig)
   
   filename <- paste("Situation2_BAP_combined_SN_d_", num_neighbors, ".csv", sep = "")
   write.csv(AB_combined_Subnetworks, file = filename)
@@ -1150,4 +1169,4 @@ for (num_neighbors in 1:5){
   assign(paste("Situation2_BAP_combined_SN_d", num_neighbors, sep = "_"), AB_combined_Subnetworks)
 }
 
-
+####Create Pairwise table for Significant Enrichment Scores####
