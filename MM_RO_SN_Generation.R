@@ -285,7 +285,7 @@ for (num_neighbors in 1:5){
 
 rm(temp_df_P_SNs, temp_df_B_SNs, delete, lengths_P, lengths_B, temp_pos_Bs, temp_pos_Ps)
 
-####Generate SN combining P and each B (situation 1+6)####
+####Generate SN combining P and each B with Disease Enrichment (situation 1+6)####
 #(Function [Generate.MMandROCombined.SN ()] is saved in Functions.Rmd file)
 neighbors_list <- c("C", "D", "E", "F", "G", "P", "Q", "R", "S", "T")
 for (num_neighbors in 1:5){
@@ -351,15 +351,159 @@ for (num_neighbors in 1:5){
   for(i in 1:ncol(PAB_Individual_Bs_Subnetworks)){
     lengths_PAB <- append(lengths_PAB, length(which(!is.na(PAB_Individual_Bs_Subnetworks[,i]))))
   }
-  delete <- max(lengths_PAB) + 1:nrow(PAB_combined_Subnetworks)
+  delete <- max(lengths_PAB) + 1:nrow(PAB_Individual_Bs_Subnetworks)
   PAB_Individual_Bs_Subnetworks <- PAB_Individual_Bs_Subnetworks[-delete, ]
   
   filename <- paste("Situation1_PAB_Individual_Bs_SN_d_", num_neighbors, ".csv", sep = "")
-  write.csv(PAB_combined_Subnetworks, file = filename)
+  write.csv(PAB_Individual_Bs_Subnetworks, file = filename)
   
   assign(paste("Situation1_B", neighbors_list[num_neighbors], "SNs", sep = "_"), temp_df_B_SNs)
   assign(paste("Situation1_A", neighbors_list[num_neighbors+5], "SNs", sep = "_"), temp_df_P_SNs)
   assign(paste("Situation1_PAB_Individual_Bs_SN_d_", num_neighbors, sep = ""), PAB_Individual_Bs_Subnetworks)
+
+  filename = paste("DiseaseEnrichment_Situation1_PAB_Individual_Ps_SN_d_", num_neighbors, ".csv", sep = "")
+  subnetworks <- PAB_Individual_Bs_Subnetworks
+  
+  output <- data.frame(matrix(NA, nrow = ncol(GeneSetTable)*2))
+  
+  numSN <- length(colnames(subnetworks))
+  numSamples <- 100 #(enter number of sample per group)
+  numDiseases <- length(colnames(GeneSetTable))
+  
+  TableauDiseaseEnrichment <- data.frame(matrix(NA, nrow = 1, ncol = 6))
+  colnames(TableauDiseaseEnrichment) <- c("Disease", "Disease_num_genes", "SN", "SN_num_genes", "p_value", "FDR")
+  
+  Disease_sample_p_values <- data.frame(matrix(NA, nrow = ncol(GeneSetTable) * numSamples, ncol = ncol(subnetworks)), row.names = NULL)
+  colnames(Disease_sample_p_values) <- colnames(subnetworks)
+  
+  output2 <- data.frame(matrix(NA, nrow = ncol(GeneSetTable)*2, ncol = ncol(subnetworks) * 2))
+  
+  rows <- NULL
+  for (i in 1:nrow(output2)){
+    var <- ceiling(i/2)
+    sub <- ifelse(i %% 2 == 0, "FDR", "pval")
+    rows <- append(rows, paste(colnames(GeneSetTable[var]), sub, sep = "_"))
+  }
+  rownames(output2) <- rows
+  rm(rows)
+  
+  cols <- NULL
+  for (i in 1:ncol(output2)){
+    var <- ceiling(i/2)
+    sub <- ifelse(i %% 2 == 0, "b", "a")
+    cols <- append(cols, paste(colnames(subnetworks[var]), sub, sep = "_"))
+  }
+  colnames(output2) <- cols
+  rm(cols)
+  
+  for (k in 1:numSN) {
+    for (j in 1:numDiseases) {
+      for (i in 1:numSamples) {
+        TargetSize <- length(which(!is.na(subnetworks[, k])))
+        if (length(na.omit(GeneSetTable[,j])) > length(na.omit(subnetworks[,k]))) {
+          Overlap <- length(which(!is.na(RO_network_genes[match(GeneSetTable[, j], sample(RO_network_genes, TargetSize, replace = FALSE, prob = NULL))]))) 
+        }
+        if (length(na.omit(GeneSetTable[,j])) <= length(na.omit(subnetworks[,k]))) {
+          Overlap <- length(which(!is.na(GeneSetTable[match(sample(RO_network_genes, TargetSize, replace = FALSE, prob = NULL), GeneSetTable[, j]), j])))
+        }
+        TestSetSize <- length(which(!is.na(match(RO_network_genes, GeneSetTable[,j]))))
+        TotalSize <- length(RO_network_genes)
+        
+        val <- (j * numSamples) - (numSamples - i)
+        
+        temp_list <- OverEnrichment(Overlap, TargetSize, TestSetSize, TotalSize)
+        
+        Disease_sample_p_values[val, k] <- temp_list[[1]]
+      }
+    }
+  }
+  
+  for (i in 1:numSN) {
+    Disease_p_values <- data.frame(matrix(NA, nrow = ncol(GeneSetTable) , ncol = 6), row.names = NULL)
+    colnames(Disease_p_values) <- c("Disease", "Disease_num_genes", "SN", "SN_num_genes", "p_value", "FDR")
+    
+    for (j in 1:numDiseases) {
+      
+      if (length(na.omit(GeneSetTable[,j])) <= length(na.omit(subnetworks[,i]))) {
+        Overlap <- length(which(!is.na(subnetworks[match(GeneSetTable[, j], as.character(subnetworks[, i])), i]))) 
+      }
+      if (length(na.omit(GeneSetTable[,j])) > length(na.omit(subnetworks[,i]))){
+        Overlap <- length(which(!is.na(GeneSetTable[match(as.character(subnetworks[, i]), GeneSetTable[, j]), j]))) 
+      }
+      
+      TargetSize <- length(which(!is.na(subnetworks[, i])))
+      TestSetSize <- length(which(!is.na(match(GeneSetTable[,j], V(g_RO)$name))))
+      
+      TotalSize <- length(V(g_RO)$name)
+      index <- (i * numSN) - (numSN - j) 
+      temp_list <- OverEnrichment(Overlap, TargetSize, TestSetSize, TotalSize)
+      Disease_p_values[j, 1] <- colnames(GeneSetTable)[j]
+      Disease_p_values[j, 2] <- TestSetSize
+      Disease_p_values[j, 3] <- paste(unlist(strsplit(colnames(subnetworks)[i], split='_', fixed=TRUE))[1:4], collapse = "_")
+      Disease_p_values[j, 4] <- length(na.omit(subnetworks[,i]))
+      Disease_p_values[j, 5] <- temp_list[[1]]
+      row <- (2 * j) - 1
+      col <- (2 * i) - 1
+      output2[row, col] <- temp_list[[1]]
+      row2 <- (2 * j) - 1
+      col2 <- 2 * i
+      output2[row2, col2] <- Overlap
+      row3 <- 2 * j
+      col3 <- 2 * i
+      output2[row3, col3] <- TestSetSize
+      
+      #FDR = a/(b*c)
+      #where: a = # of actual pvalues for that KD that are less than the actual p-values in that KD; b = # of sample p-values for that KD that are less than the actual p-value in that KD * number of samples generated per pathway per KD
+      test_pval <- Disease_p_values[j, 5]
+      
+      if (test_pval <= 0.05){
+        a <- length(which(Disease_p_values[, 5] <= test_pval))
+        b <- length(which(Disease_sample_p_values[, i] <= test_pval))
+        c <- numSamples
+        if (b != 0){
+          row = 2 * j
+          col = (2 * i) - 1
+          output2[row, col] <- b / (a * c)
+          Disease_p_values[j, 6] <- b / (a * c)
+        }
+        if (b == 0){
+          row = 2 * j
+          col = (2 * i) - 1
+          output2[row, col] <- "pval highly sig" 
+          Disease_p_values[j, 6] <- "pval highly sig"
+        }
+        rm(test_pval, a, b, c)
+      }
+    }
+    TableauDiseaseEnrichment <- rbind.data.frame(TableauDiseaseEnrichment, Disease_p_values)
+  }
+  output <- cbind(output, output2)
+  
+  #rm(i, j, k, val, Overlap, TargetSize, TestSetSize, TotalSize)
+
+  length(which(Disease_sample_p_values < 0.05))
+  length(which(Disease_p_values <= 0.05))
+  
+  TableauDiseaseEnrichment <- TableauDiseaseEnrichment[-1, ]
+  output <- output[,-1]
+  filename_Tableau <- paste("Tableau_", filename, sep = "")
+  write.csv(TableauDiseaseEnrichment, file = filename_Tableau)
+  write.csv(output, file = filename)
+  
+  assign("PW_DIS", output)
+  
+  temp_df_sig <- Pairwise.Disease.Table.Sig(PW_DIS)
+  temp_df_nom_sig <- Pairwise.Disease.Table.Nom.Sig(PW_DIS)
+  
+  temp_df_sig[lower.tri(temp_df_sig)] <- ""
+  temp_df_nom_sig[lower.tri(temp_df_nom_sig)] <- ""
+  
+  filename_pairwise_sig <- paste("Dis_Sig_Pairwise_Situation1_PAB_Individual_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_sig, file = filename_pairwise_sig)
+  
+  filename_pairwise_nom_sig <- paste("Dis_Nom_Sig_Pairwise_Situation1_PAB_Individual_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_nom_sig, file = filename_pairwise_nom_sig)
+  
 }
 
 ####Identify RO -> MM SN connections (situation 2+5)####
@@ -605,6 +749,147 @@ for (num_neighbors in 1:5){
   assign(paste("Situation2_B", neighbors_list[num_neighbors], "SNs", sep = "_"), temp_df_B_SNs)
   assign(paste("Situation2_A", neighbors_list[num_neighbors+5], "SNs", sep = "_"), temp_df_P_SNs)
   assign(paste("Situation2_BAP_Individual_Ps_SN_d_", num_neighbors, sep = ""), BAP_Individual_Ps_Subnetworks)
+
+  filename = paste("DiseaseEnrichment_Situation2_BAP_Individual_Ps_SN_d_", num_neighbors, ".csv", sep = "")
+ 
+  subnetworks <- BAP_Individual_Ps_Subnetworks
+  
+  output <- data.frame(matrix(NA, nrow = ncol(GeneSetTable)*2))
+  
+  numSN <- length(colnames(subnetworks))
+  numSamples <- 100 #(enter number of sample per group)
+  numDiseases <- length(colnames(GeneSetTable))
+  
+  TableauDiseaseEnrichment <- data.frame(matrix(NA, nrow = 1, ncol = 6))
+  colnames(TableauDiseaseEnrichment) <- c("Disease", "Disease_num_genes", "SN", "SN_num_genes", "p_value", "FDR")
+  
+  Disease_sample_p_values <- data.frame(matrix(NA, nrow = ncol(GeneSetTable) * numSamples, ncol = ncol(subnetworks)), row.names = NULL)
+  colnames(Disease_sample_p_values) <- colnames(subnetworks)
+  
+  output2 <- data.frame(matrix(NA, nrow = ncol(GeneSetTable)*2, ncol = ncol(subnetworks) * 2))
+  
+  rows <- NULL
+  for (i in 1:nrow(output2)){
+    var <- ceiling(i/2)
+    sub <- ifelse(i %% 2 == 0, "FDR", "pval")
+    rows <- append(rows, paste(colnames(GeneSetTable[var]), sub, sep = "_"))
+  }
+  rownames(output2) <- rows
+  rm(rows)
+  
+  cols <- NULL
+  for (i in 1:ncol(output2)){
+    var <- ceiling(i/2)
+    sub <- ifelse(i %% 2 == 0, "b", "a")
+    cols <- append(cols, paste(colnames(subnetworks[var]), sub, sep = "_"))
+  }
+  colnames(output2) <- cols
+  rm(cols)
+  
+  for (k in 1:numSN) {
+    for (j in 1:numDiseases) {
+      for (i in 1:numSamples) {
+        TargetSize <- length(which(!is.na(subnetworks[, k])))
+        if (length(na.omit(GeneSetTable[,j])) > length(na.omit(subnetworks[,k]))) {
+          Overlap <- length(which(!is.na(RO_network_genes[match(GeneSetTable[, j], sample(RO_network_genes, TargetSize, replace = FALSE, prob = NULL))]))) 
+        }
+        if (length(na.omit(GeneSetTable[,j])) <= length(na.omit(subnetworks[,k]))) {
+          Overlap <- length(which(!is.na(GeneSetTable[match(sample(RO_network_genes, TargetSize, replace = FALSE, prob = NULL), GeneSetTable[, j]), j])))
+        }
+        TestSetSize <- length(which(!is.na(match(RO_network_genes, GeneSetTable[,j]))))
+        TotalSize <- length(RO_network_genes)
+        
+        val <- (j * numSamples) - (numSamples - i)
+        
+        temp_list <- OverEnrichment(Overlap, TargetSize, TestSetSize, TotalSize)
+        
+        Disease_sample_p_values[val, k] <- temp_list[[1]]
+      }
+    }
+  }
+  
+  for (i in 1:numSN) {
+    Disease_p_values <- data.frame(matrix(NA, nrow = ncol(GeneSetTable) , ncol = 6), row.names = NULL)
+    colnames(Disease_p_values) <- c("Disease", "Disease_num_genes", "SN", "SN_num_genes", "p_value", "FDR")
+    
+    for (j in 1:numDiseases) {
+      
+      if (length(na.omit(GeneSetTable[,j])) <= length(na.omit(subnetworks[,i]))) {
+        Overlap <- length(which(!is.na(subnetworks[match(GeneSetTable[, j], as.character(subnetworks[, i])), i]))) 
+      }
+      if (length(na.omit(GeneSetTable[,j])) > length(na.omit(subnetworks[,i]))){
+        Overlap <- length(which(!is.na(GeneSetTable[match(as.character(subnetworks[, i]), GeneSetTable[, j]), j]))) 
+      }
+      
+      TargetSize <- length(which(!is.na(subnetworks[, i])))
+      TestSetSize <- length(which(!is.na(match(GeneSetTable[,j], V(g_RO)$name))))
+      
+      TotalSize <- length(V(g_RO)$name)
+      index <- (i * numSN) - (numSN - j) 
+      temp_list <- OverEnrichment(Overlap, TargetSize, TestSetSize, TotalSize)
+      Disease_p_values[j, 1] <- colnames(GeneSetTable)[j]
+      Disease_p_values[j, 2] <- TestSetSize
+      Disease_p_values[j, 3] <- paste(unlist(strsplit(colnames(subnetworks)[i], split='_', fixed=TRUE))[1:4], collapse = "_")
+      Disease_p_values[j, 4] <- length(na.omit(subnetworks[,i]))
+      Disease_p_values[j, 5] <- temp_list[[1]]
+      row <- (2 * j) - 1
+      col <- (2 * i) - 1
+      output2[row, col] <- temp_list[[1]]
+      row2 <- (2 * j) - 1
+      col2 <- 2 * i
+      output2[row2, col2] <- Overlap
+      row3 <- 2 * j
+      col3 <- 2 * i
+      output2[row3, col3] <- TestSetSize
+      
+      #FDR = a/(b*c)
+      #where: a = # of actual pvalues for that KD that are less than the actual p-values in that KD; b = # of sample p-values for that KD that are less than the actual p-value in that KD * number of samples generated per pathway per KD
+      test_pval <- Disease_p_values[j, 5]
+      
+      if (test_pval <= 0.05){
+        a <- length(which(Disease_p_values[, 5] <= test_pval))
+        b <- length(which(Disease_sample_p_values[, i] <= test_pval))
+        c <- numSamples
+        if (b != 0){
+          row = 2 * j
+          col = (2 * i) - 1
+          output2[row, col] <- b / (a * c)
+          Disease_p_values[j, 6] <- b / (a * c)
+        }
+        if (b == 0){
+          row = 2 * j
+          col = (2 * i) - 1
+          output2[row, col] <- "pval highly sig" 
+          Disease_p_values[j, 6] <- "pval highly sig"
+        }
+        rm(test_pval, a, b, c)
+      }
+    }
+    TableauDiseaseEnrichment <- rbind.data.frame(TableauDiseaseEnrichment, Disease_p_values)
+  }
+  output <- cbind(output, output2)
+  
+  
+  TableauDiseaseEnrichment <- TableauDiseaseEnrichment[-1, ]
+  output <- output[,-1]
+  
+  filename_Tableau <- paste("Tableau_", filename, sep = "")
+  write.csv(TableauDiseaseEnrichment, file = filename_Tableau)
+  write.csv(output, file = filename)
+  
+  assign("PW_DIS", output)
+  
+  temp_df_sig <- Pairwise.Disease.Table.Sig(PW_DIS)
+  temp_df_nom_sig <- Pairwise.Disease.Table.Nom.Sig(PW_DIS)
+  
+  temp_df_sig[upper.tri(temp_df_sig)] <- ""
+  temp_df_nom_sig[upper.tri(temp_df_nom_sig)] <- ""
+  
+  filename_pairwise_sig <- paste("Dis_Sig_Pairwise_Situation2_BAP_Individual_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_sig, file = filename_pairwise_sig)
+  
+  filename_pairwise_nom_sig <- paste("Dis_Nom_Sig_Pairwise_Situation2_BAP_Individual_SN_d_", num_neighbors, ".csv", sep = "")
+  write.csv(temp_df_nom_sig, file = filename_pairwise_nom_sig)
 }
 
 ####Disease Enrichment on Individual Bs and Ps Subnetworks####
@@ -934,6 +1219,9 @@ for (num_neighbors in 1:5){
   temp_df_sig <- Pairwise.Disease.Table.Sig(test_PW_DIS)
   temp_df_nom_sig <- Pairwise.Disease.Table.Nom.Sig(test_PW_DIS)
   
+  temp_df_sig[lower.tri(temp_df_sig)] <- ""
+  temp_df_nom_sig[lower.tri(temp_df_nom_sig)] <- ""
+  
   filename_pairwise_sig <- paste("Dis_Sig_Pairwise_Situation1_PAB_combined_SN_d_", num_neighbors, ".csv", sep = "")
   write.csv(temp_df_sig, file = filename_pairwise_sig)
   
@@ -1151,6 +1439,9 @@ for (num_neighbors in 1:5){
   temp_df_sig <- Pairwise.Disease.Table.Sig(test_PW_DIS)
   temp_df_nom_sig <- Pairwise.Disease.Table.Nom.Sig(test_PW_DIS)
   
+  temp_df_sig[upper.tri(temp_df_sig)] <- ""
+  temp_df_nom_sig[upper.tri(temp_df_nom_sig)] <- ""
+  
   filename_pairwise_sig <- paste("Dis_Sig_Pairwise_Situation2_BAP_combined_SN_d_", num_neighbors, ".csv", sep = "")
   write.csv(temp_df_sig, file = filename_pairwise_sig)
   
@@ -1169,4 +1460,3 @@ for (num_neighbors in 1:5){
   assign(paste("Situation2_BAP_combined_SN_d", num_neighbors, sep = "_"), AB_combined_Subnetworks)
 }
 
-####Create Pairwise table for Significant Enrichment Scores####
