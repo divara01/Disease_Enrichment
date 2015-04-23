@@ -80,7 +80,7 @@ Summary_B_E_TO_MM <- cbind(B_FROM_E_TO_MM, B_TO_E_TO_MM, B_ALL_E_TO_MM)
 Summary_B_F_TO_MM <- cbind(B_FROM_F_TO_MM, B_TO_F_TO_MM, B_ALL_F_TO_MM)
 Summary_B_G_TO_MM <- cbind(B_FROM_G_TO_MM, B_TO_G_TO_MM, B_ALL_G_TO_MM)
 
-####Situation 5-8: Get X neighbors of each gene B subnetwork in Magic####
+####Situation #5-8: Get X neighbors of each gene B subnetwork in Magic####
 #(Function [GenerateMagicSubnetworks_InfoFlowMMOmental] is saved in Functions.Rmd file)
 
 mode_RO_list <- c("in", "out")
@@ -288,7 +288,10 @@ rm(temp_df_P_SNs, temp_df_B_SNs, delete, lengths_P, lengths_B, temp_pos_Bs, temp
 ####Generate SN combining P and each B with Disease Enrichment (situation 1+6)####
 #(Function [Generate.MMandROCombined.SN ()] is saved in Functions.Rmd file)
 neighbors_list <- c("C", "D", "E", "F", "G", "P", "Q", "R", "S", "T")
-for (num_neighbors in 1:5){
+num_neighbors_list <- c(1, 3, 5)
+for (num_neighbors_index in 1:length(num_neighbors_list)){
+  num_neighbors <- num_neighbors_list[num_neighbors_index]
+  
   temp_df_B_SNs <- data.frame(matrix(NA, nrow = length(V(g_RO)$name), ncol = 1))
   temp_df_P_SNs <- data.frame(matrix(NA, nrow = length(V(g_MM)$name), ncol = 1))
   
@@ -378,14 +381,9 @@ for (num_neighbors in 1:5){
   
   output2 <- data.frame(matrix(NA, nrow = ncol(GeneSetTable)*2, ncol = ncol(subnetworks) * 2))
   
-  rows <- NULL
-  for (i in 1:nrow(output2)){
-    var <- ceiling(i/2)
-    sub <- ifelse(i %% 2 == 0, "FDR", "pval")
-    rows <- append(rows, paste(colnames(GeneSetTable[var]), sub, sep = "_"))
-  }
-  rownames(output2) <- rows
-  rm(rows)
+  var <- seq(1:nrow(output2))
+  x <- apply(output2, 1, assign.row.names)
+  rownames(output2) <- x[,1]
   
   cols <- NULL
   for (i in 1:ncol(output2)){
@@ -675,9 +673,12 @@ for (num_neighbors in 1:5){
 
 rm(temp_df_P_SNs, temp_df_B_SNs, delete, lengths_P, lengths_B, temp_pos_Bs, temp_pos_Ps)
 
-####Generate SN combining P and each B (situation2+5)####
+####Generate SN combining P and each B with Disease Enrichment(situation2+5)####
 neighbors_list <- c("C", "D", "E", "F", "G", "P", "Q", "R", "S", "T")
-for (num_neighbors in 1:5){
+num_neighbors_list <- c(1, 3, 5)
+for (num_neighbors_index in 1:length(num_neighbors_list)){
+  num_neighbors <- num_neighbors_list[num_neighbors_index]
+  
   temp_df_B_SNs <- data.frame(matrix(NA, nrow = length(V(g_RO)$name), ncol = 1))
   temp_df_P_SNs <- data.frame(matrix(NA, nrow = length(V(g_MM)$name), ncol = 1))
   
@@ -1024,7 +1025,10 @@ write.csv(output, file = filename)
 
 ####Combine all Bs for each A w/Disease Enrichment (situation1+6)####
 neighbors_list <- c("C", "D", "E", "F", "G", "P", "Q", "R", "S", "T")
-for (num_neighbors in 1:5){
+num_neighbors_list <- c(1, 3, 5)
+for (num_neighbors_index in 1:length(num_neighbors_list)){
+  num_neighbors <- num_neighbors_list[num_neighbors_index]
+  
   temp_df_B_SNs <- data.frame(matrix(NA, nrow = length(V(g_RO)$name), ncol = 1))
   temp_df_P_SNs <- data.frame(matrix(NA, nrow = length(V(g_MM)$name), ncol = 1))
   
@@ -1242,7 +1246,10 @@ for (num_neighbors in 1:5){
 
 ####Combine all Bs for each A w/Disease Enrichment (situation2+5)####
 neighbors_list <- c("C", "D", "E", "F", "G", "P", "Q", "R", "S", "T")
-for (num_neighbors in 1:5){
+num_neighbors_list <- c(1, 3, 5)
+for (num_neighbors_index in 1:length(num_neighbors_list)){
+  num_neighbors <- num_neighbors_list[num_neighbors_index]
+  
   temp_df_B_SNs <- data.frame(matrix(NA, nrow = length(V(g_RO)$name), ncol = 1))
   temp_df_P_SNs <- data.frame(matrix(NA, nrow = length(V(g_MM)$name), ncol = 1))
   
